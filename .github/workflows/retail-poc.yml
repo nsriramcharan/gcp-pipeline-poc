@@ -1,0 +1,84 @@
+name: Retail Data POC Phase 2
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - "retail-data/**"
+      - ".github/workflows/retail-poc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  run-dataproc-serverless:
+    name: Upload Artifacts And Run Dataproc Serverless
+    runs-on: ubuntu-latest
+
+    env:
+      # Core GCP configuration (set these as GitHub repository variables).
+      #GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT_ID: budigital-practiceecommretail
+      GCP_REGION: asia-south1
+      # OIDC/WIF configuration (set from Terraform dev outputs).
+      GCP_WIF_PROVIDER: projects/85838543746/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+      GCP_DEPLOYER_SERVICE_ACCOUNT: sa-dev-retail-dataproc@budigital-practiceecommretail.iam.gserviceaccount.com
+      # Dataproc runtime service account email.
+      GCP_DATAPROC_SERVICE_ACCOUNT: sa-dev-retail-dataproc@budigital-practiceecommretail.iam.gserviceaccount.com
+      # GCS object destinations (set from Terraform dev outputs).
+      GCS_INPUT_URI: gs://your-gcp-project-id-dev-retail-input/input/retail_transactions.csv
+      GCS_JOBS_URI: gs://your-gcp-project-id-dev-retail-jobs/jobs/retail_aggregation.py
+      GCS_OUTPUT_URI: gs://your-gcp-project-id-dev-retail-output/output/market_summary/
+
+    steps:
+      # Stage 1: Checkout repository source files.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Stage 2: Authenticate to GCP using GitHub OIDC + Workload Identity Federation.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      # Stage 3: Install gcloud CLI for storage operations and Dataproc batch submission.
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      # Stage 4: Upload retail input dataset to the configured input object path.
+      - name: Upload retail dataset to GCS
+        run: |
+          gcloud storage cp \
+            retail-data/data/retail_transactions.csv \
+            "${GCS_INPUT_URI}"
+
+      # Stage 5: Upload PySpark application to the configured jobs object path.
+      - name: Upload PySpark application to GCS
+        run: |
+          gcloud storage cp \
+            retail-data/src/spark/retail_aggregation.py \
+            "${GCS_JOBS_URI}"
+
+      # Stage 6: Submit Dataproc Serverless PySpark batch.
+      - name: Submit Dataproc Serverless batch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BATCH_ID="retail-poc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          gcloud dataproc batches submit pyspark "${GCS_JOBS_URI}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --batch="${BATCH_ID}" \
+            --service-account="${GCP_DATAPROC_SERVICE_ACCOUNT}" \
+            --subnet="projects/${GCP_PROJECT_ID}/regions/asia-south1/subnetworks/secure-subnet-sin1" 
+            -- \
+            --input "${GCS_INPUT_URI}" \
+            --output "${GCS_OUTPUT_URI}" \
+            --output-format "parquet"

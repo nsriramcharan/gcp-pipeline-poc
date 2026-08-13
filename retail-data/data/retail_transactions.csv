@@ -1,0 +1,6 @@
+transaction_id,store_id,product_category,quantity,unit_price,transaction_date
+T001,S001,Grocery,2,5.50,2026-08-01
+T002,S001,Electronics,1,299.99,2026-08-01
+T003,S002,Grocery,5,3.25,2026-08-02
+T004,S002,Apparel,3,19.99,2026-08-02
+T005,S003,Electronics,2,149.99,2026-08-03
