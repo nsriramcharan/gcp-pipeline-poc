@@ -24,7 +24,7 @@ jobs:
       GCP_REGION: asia-south1
       # OIDC/WIF configuration (set from Terraform dev outputs).
       GCP_WIF_PROVIDER: projects/85838543746/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-      GCP_DEPLOYER_SERVICE_ACCOUNT: projects/budigital-practiceecommretail/serviceAccounts/sa-dev-retail-dataproc@budigital-practiceecommretail.iam.gserviceaccount.com
+      GCP_DEPLOYER_SERVICE_ACCOUNT: sa-dev-retail-dataproc@budigital-practiceecommretail.iam.gserviceaccount.com
       # Dataproc runtime service account email.
       GCP_DATAPROC_SERVICE_ACCOUNT: sa-dev-retail-dataproc@budigital-practiceecommretail.iam.gserviceaccount.com
       # GCS object destinations (set from Terraform dev outputs).
