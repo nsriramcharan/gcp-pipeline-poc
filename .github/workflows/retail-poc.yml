@@ -77,6 +77,7 @@ jobs:
             --region="${GCP_REGION}" \
             --batch="${BATCH_ID}" \
             --service-account="${GCP_DATAPROC_SERVICE_ACCOUNT}" \
+            --subnet="projects/${GCP_PROJECT_ID}/regions/asia-south1/subnetworks/secure-subnet-sin1" 
             -- \
             --input "${GCS_INPUT_URI}" \
             --output "${GCS_OUTPUT_URI}" \
